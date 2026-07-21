@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=lib/shared.bash
+. "$DIR/../lib/shared.bash"
+
+main() {
+  setup_error_trap
+  enable_debug_if_requested
+
+  if ! command_exists coredumpctl; then
+    log_warning "coredumpctl command not found; coredump detection is disabled"
+    return
+  fi
+
+  log_info "Storing checksum of the most recent accessible coredump"
+  # cksum is available on Linux and in the minimal environments used by agents.
+  COREDUMP_LAST_CKSUM=$(coredumpctl --no-pager --quiet --json=short -1 list | cksum)
+  export COREDUMP_LAST_CKSUM
+}
+
+main "$@"

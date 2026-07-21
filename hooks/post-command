@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=lib/shared.bash
+. "$DIR/../lib/shared.bash"
+
+main() {
+  setup_error_trap
+  enable_debug_if_requested
+
+  if ! command_exists coredumpctl; then
+    log_warning "coredumpctl command not found; coredump detection is disabled"
+    return
+  fi
+
+  if [[ -z "${COREDUMP_LAST_CKSUM:-}" ]]; then
+    log_error "COREDUMP_LAST_CKSUM is empty; expected it to be exported by pre-command"
+    return 1
+  fi
+
+  local current_cksum
+  current_cksum=$(coredumpctl --no-pager --quiet --json=short -1 list | cksum)
+
+  if [[ "$current_cksum" == "$COREDUMP_LAST_CKSUM" ]]; then
+    log_info "Latest accessible coredump is unchanged since pre-command"
+    return
+  fi
+
+  echo "+++ Latest accessible coredump changed since pre-command"
+
+  local core_file="${BUILDKITE_JOB_ID}.core.xz"
+  coredumpctl --no-pager --quiet -1 dump | xz > "$core_file"
+  buildkite-agent artifact upload "$core_file"
+  log_success "Uploaded ${core_file}"
+}
+
+main "$@"

@@ -1,14 +1,11 @@
-name: Buildkite Plugin
-description: Exceptional functionality
-author: https://github.com/buildkite-plugins
+name: Coredump Artifact Upload
+description: Detects core dumps generated while a job is running and uploads them as an artifact
+author: https://github.com/buildkite-plugins/coredump-artifact-buildkite-plugin
 requirements:
   - bash
+  - coredumpctl
+  - cksum
+  - xz
 configuration:
-  properties:
-    mandatory:
-      type: string
-    optional:
-      type: string
-  required:
-    - mandatory
+  properties: {}
   additionalProperties: false
