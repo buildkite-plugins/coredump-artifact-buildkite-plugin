@@ -1,62 +1,74 @@
-# Template Buildkite Plugin [![Build status](https://badge.buildkite.com/d673030645c7f3e7e397affddd97cfe9f93a40547ed17b6dc5.svg)](https://buildkite.com/buildkite/plugins-template)
+# Coredump Artifact Upload Buildkite Plugin
 
-A Buildkite plugin for something awesome
+A Buildkite plugin that detects core dumps generated while a job is running and uploads them as an artifact.
 
-## Options
+The plugin records the most recent systemd coredump before the command runs. If the most recent coredump changes during the command, it compresses that dump with `xz` and uploads it as `<job-id>.core.xz`.
 
-These are all the options available to configure this plugin's behaviour.
+> [!WARNING]
+> This plugin is not designed for hosts running multiple Buildkite agents, including agents started with `--spawn`. Because the systemd coredump journal is shared by the host, a dump from another job may be uploaded to the wrong job.
 
-### Required
+## Requirements
 
-#### `mandatory` (string)
+- A Linux host using `systemd-coredump`
+- `bash`, `coredumpctl`, `cksum`, and `xz` available on `PATH`
+- Permission for the Buildkite agent user to read coredumps
 
-A great description of what this is supposed to do.
+If `coredumpctl` is unavailable, the plugin logs a warning and does nothing.
 
-### Optional
+## Configuration
 
-#### `optional` (string)
+This plugin does not accept configuration options.
 
-Describe how the plugin behaviour changes if this option is not specified, allowed values and its default.
-
-## Examples
-
-Show how your plugin is to be used
-
-```yaml
-steps:
-  - label: "🔨 Running plugin"
-    command: "echo template plugin"
-    plugins:
-      - template#v1.0.0:
-          mandatory: "value"
-```
-
-## And with other options as well
-
-If you want to change the plugin behaviour:
+## Example
 
 ```yaml
 steps:
-  - label: "🔨 Running plugin"
-    command: "echo template plugin with options"
+  - label: ":hammer: Run crash test"
+    command: "./run-crash-test"
     plugins:
-      - template#v1.0.0:
-          mandatory: "value"
-          optional: "example"
+      - buildkite-plugins/coredump-artifact#v1.0.0: ~
 ```
 
-## ⚒ Developing
+## Compatibility
 
-You can use the [bk cli](https://github.com/buildkite/cli) to run the [pipeline](.buildkite/pipeline.yml) locally:
+| Elastic Stack | Agent Stack K8s | Hosted (Mac) | Hosted (Linux) | Notes |
+| :-----------: | :-------------: | :----------: | :------------: | :---- |
+|      ⚠️       |       ❌        |      ❌      |       ⚠️       | Requires a Linux host using `systemd-coredump`. |
+
+- ✅ Fully supported
+- ⚠️ Supported only when the requirements above are met
+- ❌ Not supported
+
+## Developing
+
+Run the tests:
 
 ```bash
-bk local run
+docker run --rm -v "$PWD:/plugin:ro" buildkite/plugin-tester
 ```
 
-## 👩‍💻 Contributing
+Validate the plugin metadata and README examples:
 
-Your policy on how to contribute to the plugin!
+```bash
+docker run --rm -v "$PWD:/plugin:ro" buildkite/plugin-linter \
+  --id buildkite-plugins/coredump-artifact --path /plugin
+```
 
-## 📜 License
+Run static analysis:
+
+```bash
+shellcheck hooks/* tests/* lib/*.bash
+```
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for implementation guidance.
+
+## Contributing
+
+1. Fork the repository.
+2. Make your changes and add or update tests.
+3. Run the tests, plugin linter, and ShellCheck checks above.
+4. Open a pull request.
+
+## License
 
 The package is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
